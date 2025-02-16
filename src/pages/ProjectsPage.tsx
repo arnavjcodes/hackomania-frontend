@@ -1,5 +1,3 @@
-// src/pages/ProjectsPage.tsx
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -9,7 +7,6 @@ import {
   CircularProgress,
   Card,
   CardContent,
-  IconButton,
   TextField,
   InputAdornment,
   SpeedDial,
@@ -53,7 +50,6 @@ const ProjectsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [newProjectOpen, setNewProjectOpen] = useState(false);
 
   // Fetch all projects on mount
@@ -64,8 +60,6 @@ const ProjectsPage: React.FC = () => {
         const res = await axios.get("/api/v1/projects", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        // Adjust if your API returns { projects: [...] }:
-        // setProjects(res.data.projects || []);
         setProjects(res.data);
       } catch (err) {
         console.error("Error fetching projects:", err);
@@ -120,16 +114,22 @@ const ProjectsPage: React.FC = () => {
       <Navbar isLoggedIn onLogout={() => navigate("/login")} />
 
       <Box sx={{ p: 4 }}>
-        {/* Title with a geeky icon */}
+        {/* Title with an icon */}
         <Box
           display="flex"
           alignItems="center"
           gap={1}
           sx={{ mb: 4, fontFamily: "'Ubuntu Mono', monospace" }}
         >
-          <TerminalIcon color="primary" />
-          <Typography variant="h4" sx={{ fontWeight: "bold" }}>
-            Explore Projects
+          <Typography
+            variant="h4"
+            sx={{
+              mb: 4,
+              fontWeight: "bold",
+              fontFamily: '"Press Start 2P", monospace',
+            }}
+          >
+            ./forge
           </Typography>
         </Box>
 
@@ -137,7 +137,7 @@ const ProjectsPage: React.FC = () => {
         <TextField
           fullWidth
           variant="outlined"
-          placeholder="Search projects..."
+          placeholder="Search for forges..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           sx={{
@@ -160,7 +160,7 @@ const ProjectsPage: React.FC = () => {
             variant="body1"
             sx={{ textAlign: "center", color: "text.secondary" }}
           >
-            No projects found{searchQuery ? " matching your search" : ""}.
+            No forges found{searchQuery ? " matching your search" : ""}.
           </Typography>
         ) : (
           filteredProjects.map((project) => (
@@ -170,7 +170,7 @@ const ProjectsPage: React.FC = () => {
                 mb: 3,
                 borderRadius: 2,
                 boxShadow: "0 4px 8px rgba(0,0,0,0.08)",
-                borderLeft: "6px solid #8fbcbb", // a "geeky" accent color
+                borderLeft: "6px solid #8fbcbb",
                 cursor: "pointer",
                 transition: "transform 0.2s",
                 "&:hover": {
@@ -181,12 +181,12 @@ const ProjectsPage: React.FC = () => {
               onClick={() => navigate(`/projects/${project.id}`)}
             >
               <CardContent>
-                {/* Project Owner */}
+                {/* Forge Owner */}
                 <Typography variant="subtitle2" sx={{ color: "#666", mb: 1 }}>
                   Created by {project.user?.name || project.user?.username}
                 </Typography>
 
-                {/* Project Title */}
+                {/* Forge Title */}
                 <Typography
                   variant="h5"
                   sx={{ fontWeight: "bold", mb: 1, fontFamily: "inherit" }}
@@ -202,7 +202,7 @@ const ProjectsPage: React.FC = () => {
                   {project.description}
                 </Typography>
 
-                {/* Repo & Live links as chips, if they exist */}
+                {/* Repo & Live links as Chips */}
                 <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 2 }}>
                   {project.repo_link && (
                     <Chip
@@ -243,7 +243,7 @@ const ProjectsPage: React.FC = () => {
         )}
       </Box>
 
-      {/* Speed Dial for new project (and any other actions you want) */}
+      {/* Speed Dial for New Forge */}
       <SpeedDial
         ariaLabel="Create new items"
         sx={{ position: "fixed", bottom: 24, right: 24 }}
@@ -252,13 +252,12 @@ const ProjectsPage: React.FC = () => {
       >
         <SpeedDialAction
           icon={<CodeIcon />}
-          tooltipTitle="New Project"
+          tooltipTitle="New Forge"
           onClick={() => setNewProjectOpen(true)}
         />
-        {/* Add more SpeedDialAction items here if desired */}
       </SpeedDial>
 
-      {/* Dialog for New Project */}
+      {/* Dialog for New Forge */}
       <NewProjectDialog
         open={newProjectOpen}
         onClose={() => setNewProjectOpen(false)}

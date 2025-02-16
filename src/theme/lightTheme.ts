@@ -82,7 +82,7 @@ const lightTheme = createTheme({
     MuiTextField: {
       styleOverrides: {
         root: {
-          borderRadius: 4,
+          borderRadius: 6,
           "& .MuiOutlinedInput-root": {
             "& fieldset": {
               borderColor: "#D1D9E6",

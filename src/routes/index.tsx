@@ -11,6 +11,14 @@ import ProfilePage from "../pages/Profile";
 import ExplorePage from "../pages/ExplorePage";
 import ProjectPage from "../pages/ProjectPage";
 import ProjectsPage from "../pages/ProjectsPage";
+import MeetupPage from "../pages/MeetupPage";
+import MeetupDetail from "../pages/MeetupDetail";
+import CreateResourcePage from "../pages/CreateResource";
+import ChatWidget from "../components/ChatWidget";
+
+import ResourcesPage from "../pages/AllResourcesPage";
+import ResourceDetailPage from "../pages/ResourceDetailPage";
+import { Chat } from "@mui/icons-material";
 
 interface AppRoutesProps {
   token: string | null;
@@ -85,6 +93,36 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ token, setToken, logout }) => {
       <Route
         path="/projects"
         element={token ? <ProjectsPage /> : <Navigate to="/login" />}
+      />
+
+      <Route
+        path="/meetup"
+        element={token ? <MeetupPage /> : <Navigate to="/login" />}
+      />
+
+      <Route
+        path="/meetups/:id"
+        element={token ? <MeetupDetail /> : <Navigate to="/login" />}
+      />
+
+      <Route
+        path="/createResource"
+        element={token ? <CreateResourcePage /> : <Navigate to="/login" />}
+      />
+
+      <Route
+        path="/createResource"
+        element={token ? <CreateResourcePage /> : <Navigate to="/login" />}
+      />
+
+      <Route
+        path="/resources"
+        element={token ? <ResourcesPage /> : <Navigate to="/login" />}
+      />
+
+      <Route
+        path="/resources/:id"
+        element={token ? <ResourceDetailPage /> : <Navigate to="/login" />}
       />
     </Routes>
   );

@@ -295,9 +295,7 @@ const ThreadPage: React.FC = () => {
       const res = await axios.patch(
         `/api/v1/forum_threads/${id}/toggle_like`,
         {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       setThread(res.data);
     } catch (err) {
@@ -311,9 +309,7 @@ const ThreadPage: React.FC = () => {
       const res = await axios.patch(
         `/api/v1/forum_threads/${id}/toggle_chill`,
         {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       setThread(res.data);
     } catch (err) {
@@ -325,16 +321,13 @@ const ThreadPage: React.FC = () => {
     async (content: string, parentId: number | null) => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.post(
+        await axios.post(
           `/api/v1/forum_threads/${id}/comments`,
           { content, parent_id: parentId },
           { headers: { Authorization: `Bearer ${token}` } }
         );
-
+        // For simplicity, reload comments after posting
         window.location.reload();
-
-        setMainComment("");
-        setReplyingTo(null);
       } catch (err) {
         console.error("Error adding comment:", err);
       }
@@ -372,12 +365,15 @@ const ThreadPage: React.FC = () => {
     );
   }
 
+  // Determine if this is a Help thread (case-insensitive)
+  const isHelpThread = thread?.category?.name.toLowerCase() === "help";
+
   return (
     <>
       <Navbar isLoggedIn onLogout={() => navigate("/login")} />
       <Box sx={{ maxWidth: "800px", mx: "auto", p: 3 }}>
         {/* Category and Mood Header */}
-        <Box display="flex" gap={1} sx={{ mb: 3 }}>
+        <Box display="flex" gap={1} sx={{ mb: 3, alignItems: "center" }}>
           <Chip
             label={thread?.category?.name || "General"}
             size="small"
@@ -406,6 +402,20 @@ const ThreadPage: React.FC = () => {
               letterSpacing: "0.5px",
             }}
           />
+          {isHelpThread && (
+            <Chip
+              label="Help Request"
+              size="small"
+              sx={{
+                bgcolor: "error.main",
+                color: "error.contrastText",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                fontSize: "0.7rem",
+                letterSpacing: "0.5px",
+              }}
+            />
+          )}
         </Box>
 
         <Typography
@@ -445,6 +455,7 @@ const ThreadPage: React.FC = () => {
             alignItems="center"
             gap={2}
             mb={2}
+            sx={{ cursor: "pointer" }}
           >
             <Avatar
               sx={{
@@ -475,7 +486,11 @@ const ThreadPage: React.FC = () => {
               color: "text.secondary",
             }}
           >
-            {thread?.content}
+            {isHelpThread
+              ? "Hey, I need some assistance! " +
+                thread?.content +
+                " (Please be as detailed as possible when asking for help.)"
+              : thread?.content}
           </Typography>
 
           <Box display="flex" flexWrap="wrap" gap={1} sx={{ mt: 2 }}>
@@ -584,7 +599,11 @@ const ThreadPage: React.FC = () => {
             multiline
             minRows={3}
             variant="outlined"
-            placeholder="Share your thoughts..."
+            placeholder={
+              isHelpThread
+                ? "Describe your problem and what help you need..."
+                : "Share your thoughts..."
+            }
             value={mainComment}
             onChange={(e) => setMainComment(e.target.value)}
             sx={{ mb: 2 }}

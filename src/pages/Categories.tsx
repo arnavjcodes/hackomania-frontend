@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import {
   Box,
   Typography,
@@ -9,10 +9,10 @@ import {
   CardContent,
   Grid,
   TextField,
-  InputAdornment
-} from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import Navbar from '../components/layout/Navbar';
+  InputAdornment,
+} from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
+import Navbar from "../components/layout/Navbar";
 
 interface Category {
   id: number;
@@ -23,7 +23,7 @@ interface Category {
 
 const CategoriesPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -31,14 +31,14 @@ const CategoriesPage: React.FC = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get('/api/v1/categories', {
-          headers: { Authorization: `Bearer ${token}` }
+        const token = localStorage.getItem("token");
+        const res = await axios.get("/api/v1/categories", {
+          headers: { Authorization: `Bearer ${token}` },
         });
         setCategories(res.data);
       } catch (err) {
-        console.error('Error fetching categories:', err);
-        setError('Failed to load categories');
+        console.error("Error fetching archives:", err);
+        setError("Failed to load archives");
       } finally {
         setLoading(false);
       }
@@ -46,14 +46,22 @@ const CategoriesPage: React.FC = () => {
     fetchCategories();
   }, []);
 
-  const filteredCategories = categories.filter(category =>
-    category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    category.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredCategories = categories.filter(
+    (category) =>
+      category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      category.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center' }}>
+      <Box
+        sx={{
+          display: "flex",
+          height: "100vh",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -61,7 +69,14 @@ const CategoriesPage: React.FC = () => {
 
   if (error) {
     return (
-      <Box sx={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center' }}>
+      <Box
+        sx={{
+          display: "flex",
+          height: "100vh",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
         <Typography color="error">{error}</Typography>
       </Box>
     );
@@ -69,17 +84,24 @@ const CategoriesPage: React.FC = () => {
 
   return (
     <>
-      <Navbar isLoggedIn onLogout={() => navigate('/login')} />
-      
+      <Navbar isLoggedIn onLogout={() => navigate("/login")} />
+
       <Box sx={{ p: 4 }}>
-        <Typography variant="h4" sx={{ mb: 4, fontWeight: 'bold' }}>
-          Categories
+        <Typography
+          variant="h4"
+          sx={{
+            mb: 4,
+            fontWeight: "bold",
+            fontFamily: '"Press Start 2P", monospace',
+          }}
+        >
+          ./archives
         </Typography>
 
         <TextField
           fullWidth
           variant="outlined"
-          placeholder="Search categories..."
+          placeholder="Search archives..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           sx={{ mb: 4 }}
@@ -97,27 +119,36 @@ const CategoriesPage: React.FC = () => {
             <Grid item xs={12} sm={6} md={4} key={category.id}>
               <Card
                 sx={{
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  cursor: 'pointer',
-                  transition: 'transform 0.2s',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: 4
-                  }
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  cursor: "pointer",
+                  transition: "transform 0.2s",
+                  "&:hover": {
+                    transform: "translateY(-4px)",
+                    boxShadow: 4,
+                  },
                 }}
                 onClick={() => navigate(`/category/${category.id}`)}
               >
                 <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
+                  <Typography
+                    variant="h5"
+                    gutterBottom
+                    sx={{ fontWeight: "bold" }}
+                  >
                     {category.name}
                   </Typography>
                   <Typography variant="body1" color="text.secondary">
-                    {category.description || 'No description available'}
+                    {category.description || "No description available"}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-                    Created: {new Date(category.created_at).toLocaleDateString()}
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ mt: 2, display: "block" }}
+                  >
+                    Created:{" "}
+                    {new Date(category.created_at).toLocaleDateString()}
                   </Typography>
                 </CardContent>
               </Card>
@@ -126,8 +157,8 @@ const CategoriesPage: React.FC = () => {
         </Grid>
 
         {filteredCategories.length === 0 && (
-          <Typography variant="body1" sx={{ mt: 4, textAlign: 'center' }}>
-            No categories found matching your search.
+          <Typography variant="body1" sx={{ mt: 4, textAlign: "center" }}>
+            No archives found matching your search.
           </Typography>
         )}
       </Box>

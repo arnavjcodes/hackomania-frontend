@@ -2,7 +2,6 @@ import React, { useState, useContext } from "react";
 import {
   AppBar,
   Toolbar,
-  Typography,
   Button,
   Box,
   Menu,
@@ -10,8 +9,8 @@ import {
   IconButton,
   useTheme,
 } from "@mui/material";
+import { Link, useNavigate } from "react-router-dom";
 import SettingsIcon from "@mui/icons-material/Settings";
-import { useNavigate } from "react-router-dom";
 import { Brightness4, Brightness7 } from "@mui/icons-material";
 import { ColorModeContext } from "../../ColorModeContext";
 
@@ -65,7 +64,7 @@ const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, onLogout }) => {
           />
         </Box>
 
-        {/* Center Links */}
+        {/* Center Links: Only main collection routes */}
         <Box
           sx={{
             display: "flex",
@@ -75,22 +74,45 @@ const Navbar: React.FC<NavbarProps> = ({ isLoggedIn, onLogout }) => {
             flexGrow: 1,
           }}
         >
-          <Button href="/" color="inherit" sx={{ textTransform: "none" }}>
+          <Button
+            component={Link}
+            to="/"
+            color="inherit"
+            sx={{ textTransform: "none" }}
+          >
             Home
           </Button>
           <Button
-            href="/categories"
+            component={Link}
+            to="/projects"
             color="inherit"
             sx={{ textTransform: "none" }}
           >
-            Categories
+            Forge
           </Button>
           <Button
-            href="/explore"
+            component={Link}
+            to="/categories"
             color="inherit"
             sx={{ textTransform: "none" }}
           >
-            Explore
+            Archives
+          </Button>
+          <Button
+            component={Link}
+            to="/meetup"
+            color="inherit"
+            sx={{ textTransform: "none" }}
+          >
+            Gatherings
+          </Button>
+          <Button
+            component={Link}
+            to="/resources"
+            color="inherit"
+            sx={{ textTransform: "none" }}
+          >
+            Vault
           </Button>
         </Box>
 

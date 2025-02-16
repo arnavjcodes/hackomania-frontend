@@ -3,6 +3,7 @@ import { BrowserRouter as Router } from "react-router-dom";
 import AppRoutes from "../routes";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
+import ChatWidget from "./ChatWidget";
 
 const App: React.FC = () => {
   const [token, setToken] = useState<string | null>(
@@ -17,6 +18,7 @@ const App: React.FC = () => {
 
   return (
     <Router>
+      <ChatWidget />
       <AppRoutes token={token} setToken={setToken} logout={handleLogout} />
     </Router>
   );

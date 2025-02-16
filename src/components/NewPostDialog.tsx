@@ -37,7 +37,10 @@ interface NewPostDialogProps {
   onClose: () => void;
 }
 
-const NewPostDialog: React.FC<NewPostDialogProps> = ({ open, onClose }) => {
+const NewPostDialog: React.FC<NewPostDialogProps> = ({
+  open,
+  onClose,
+}: any) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [userTags, setUserTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState<string>("");

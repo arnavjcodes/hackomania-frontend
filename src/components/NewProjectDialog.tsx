@@ -1,4 +1,4 @@
-// NewProjectDialog.jsx
+// src/components/NewProjectDialog.jsx
 import React, { useState } from "react";
 import {
   Dialog,
@@ -16,56 +16,50 @@ import axios from "axios";
 
 // -- STYLED COMPONENTS --
 
-const GeekyDialogTitle = styled(DialogTitle)(({ theme }) => ({
+// Use the theme's primary color for the dialog title
+const StyledDialogTitle = styled(DialogTitle)(({ theme }) => ({
   fontWeight: "bold",
   fontFamily: "'Ubuntu Mono', monospace",
-  background: "linear-gradient(90deg, #2e3440 0%, #3b4252 100%)",
-  color: "#88c0d0",
-  position: "relative",
-  // Add a little terminal-like underscore that blinks:
-  "&::after": {
-    content: '"_"',
-    position: "absolute",
-    marginLeft: "4px",
-    fontWeight: "normal",
-    color: "#88c0d0",
-    animation: "blink 1s steps(2, start) infinite",
-  },
-  "@keyframes blink": {
-    "0%": { opacity: 1 },
-    "50%": { opacity: 0 },
-    "100%": { opacity: 1 },
-  },
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  padding: theme.spacing(2),
 }));
 
-// A little monospaced style for the input fields
-const GeekyTextField = styled(TextField)(({ theme }) => ({
+// Simple monospaced text field styling
+const StyledTextField = styled(TextField)(({ theme }) => ({
   "& .MuiInputBase-root": {
     fontFamily: "'Ubuntu Mono', monospace",
   },
 }));
 
-const GeekyDialogActions = styled(DialogActions)(({ theme }) => ({
-  justifyContent: "space-between",
-  backgroundColor: theme.palette.mode === "dark" ? "#3b4252" : "#f5f5f5",
+const StyledDialogActions = styled(DialogActions)(({ theme }) => ({
+  justifyContent: "flex-end",
+  padding: theme.spacing(2),
 }));
 
 // -- MAIN COMPONENT --
-
-function NewProjectDialog({ open, onClose }) {
+function NewProjectDialog({ open, onClose }: any) {
+  // Basic fields
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [repoLink, setRepoLink] = useState("");
   const [liveSiteLink, setLiveSiteLink] = useState("");
-  const [error, setError] = useState(null);
+  // New optional fields
+  const [techStack, setTechStack] = useState("");
+  const [schemaUrl, setSchemaUrl] = useState("");
+  const [flowchartUrl, setFlowchartUrl] = useState("");
+  // Optional collaborators: comma-separated list of collaborator IDs
+  const [collaboratorsInput, setCollaboratorsInput] = useState("");
+
+  const [error, setError] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   const handleCreateProject = async () => {
     setLoading(true);
     setError(null);
-
     try {
       const token = localStorage.getItem("token");
+      // Create forge with all fields
       const response = await axios.post(
         "/api/v1/projects",
         {
@@ -74,6 +68,9 @@ function NewProjectDialog({ open, onClose }) {
             description,
             repo_link: repoLink,
             live_site_link: liveSiteLink,
+            tech_stack: techStack,
+            schema_url: schemaUrl,
+            flowchart_url: flowchartUrl,
           },
         },
         {
@@ -82,17 +79,36 @@ function NewProjectDialog({ open, onClose }) {
           },
         }
       );
-      console.log("Project created:", response.data);
+      const createdProject = response.data.project;
+      console.log("Forge created:", createdProject);
 
+      // If collaborator IDs were provided, add each one.
+      if (collaboratorsInput.trim()) {
+        const collaboratorIds = collaboratorsInput
+          .split(",")
+          .map((id) => id.trim())
+          .filter((id) => id !== "");
+        for (const collaboratorId of collaboratorIds) {
+          await axios.post(
+            `/api/v1/projects/${createdProject.id}/add_collaborator`,
+            { collaborator_id: collaboratorId },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        }
+      }
       // Clear the form and close the dialog
       setTitle("");
       setDescription("");
       setRepoLink("");
       setLiveSiteLink("");
+      setTechStack("");
+      setSchemaUrl("");
+      setFlowchartUrl("");
+      setCollaboratorsInput("");
       onClose();
     } catch (err) {
-      console.error("Error creating project:", err);
-      setError("Failed to create project. Please try again.");
+      console.error("Error creating forge:", err);
+      setError("Failed to create forge. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -104,17 +120,14 @@ function NewProjectDialog({ open, onClose }) {
       onClose={onClose}
       fullWidth
       maxWidth="sm"
-      // Blurred backdrop
       BackdropProps={{
         style: {
           backdropFilter: "blur(4px)",
         },
       }}
     >
-      {/* Terminal-like Title */}
-      <GeekyDialogTitle>New Project</GeekyDialogTitle>
-
-      <DialogContent dividers sx={{ bgcolor: "#eceff4" }}>
+      <StyledDialogTitle>New Forge</StyledDialogTitle>
+      <DialogContent dividers>
         {error && (
           <Typography
             color="error"
@@ -124,8 +137,8 @@ function NewProjectDialog({ open, onClose }) {
           </Typography>
         )}
 
-        <GeekyTextField
-          label="Project Title"
+        <StyledTextField
+          label="Forge Title"
           variant="outlined"
           fullWidth
           sx={{ mb: 2 }}
@@ -133,7 +146,7 @@ function NewProjectDialog({ open, onClose }) {
           onChange={(e) => setTitle(e.target.value)}
         />
 
-        <GeekyTextField
+        <StyledTextField
           label="Description"
           variant="outlined"
           fullWidth
@@ -144,7 +157,7 @@ function NewProjectDialog({ open, onClose }) {
           onChange={(e) => setDescription(e.target.value)}
         />
 
-        <GeekyTextField
+        <StyledTextField
           label="Repository Link"
           variant="outlined"
           fullWidth
@@ -153,17 +166,58 @@ function NewProjectDialog({ open, onClose }) {
           onChange={(e) => setRepoLink(e.target.value)}
         />
 
-        <GeekyTextField
+        <StyledTextField
           label="Live Site Link"
           variant="outlined"
           fullWidth
+          sx={{ mb: 2 }}
           value={liveSiteLink}
           onChange={(e) => setLiveSiteLink(e.target.value)}
         />
+
+        <StyledTextField
+          label="Tech Stack"
+          variant="outlined"
+          fullWidth
+          sx={{ mb: 2 }}
+          value={techStack}
+          onChange={(e) => setTechStack(e.target.value)}
+          placeholder="e.g., Ruby, Rails, React"
+        />
+
+        <StyledTextField
+          label="Schema URL"
+          variant="outlined"
+          fullWidth
+          sx={{ mb: 2 }}
+          value={schemaUrl}
+          onChange={(e) => setSchemaUrl(e.target.value)}
+          placeholder="Link to schema image or PDF"
+        />
+
+        <StyledTextField
+          label="Flowchart URL"
+          variant="outlined"
+          fullWidth
+          sx={{ mb: 2 }}
+          value={flowchartUrl}
+          onChange={(e) => setFlowchartUrl(e.target.value)}
+          placeholder="Link to flowchart image or PDF"
+        />
+
+        <StyledTextField
+          label="Collaborators (comma-separated user IDs)"
+          variant="outlined"
+          fullWidth
+          sx={{ mb: 2 }}
+          value={collaboratorsInput}
+          onChange={(e) => setCollaboratorsInput(e.target.value)}
+          placeholder="e.g., 3, 7, 12"
+        />
       </DialogContent>
 
-      <GeekyDialogActions>
-        <Button onClick={onClose} color="inherit" disabled={loading}>
+      <StyledDialogActions>
+        <Button onClick={onClose} disabled={loading}>
           Cancel
         </Button>
         <Button
@@ -171,20 +225,17 @@ function NewProjectDialog({ open, onClose }) {
           onClick={handleCreateProject}
           disabled={loading}
           sx={{
-            bgcolor: "#8fbcbb",
-            color: "white",
             fontFamily: "'Ubuntu Mono', monospace",
             fontWeight: "bold",
-            "&:hover": { bgcolor: "#88c0d0" },
           }}
         >
           {loading ? (
             <CircularProgress size={24} sx={{ color: "white" }} />
           ) : (
-            "Create Project"
+            "Create Forge"
           )}
         </Button>
-      </GeekyDialogActions>
+      </StyledDialogActions>
     </Dialog>
   );
 }

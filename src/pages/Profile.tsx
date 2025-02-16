@@ -1,3 +1,4 @@
+// src/pages/ProfilePage.tsx
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
@@ -19,6 +20,10 @@ import {
   ListItem,
   ListItemAvatar,
   ListItemText,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import {
   Edit as EditIcon,
@@ -31,6 +36,7 @@ import {
   PersonRemove,
 } from "@mui/icons-material";
 import Navbar from "../components/layout/Navbar";
+import { Graph } from "react-d3-graph";
 
 interface User {
   id: number;
@@ -59,6 +65,21 @@ interface User {
   }>;
 }
 
+interface GraphNode {
+  id: number;
+  username: string;
+  name: string | null;
+}
+interface GraphEdge {
+  source: number;
+  target: number;
+  created_at: string;
+}
+interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
 const ProfilePage: React.FC = () => {
   const { userId } = useParams();
   const [user, setUser] = useState<User | null>(null);
@@ -72,6 +93,13 @@ const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
 
+  // ---------------- Graph Widget State ----------------
+  const [showGraph, setShowGraph] = useState<boolean>(false);
+  const [graphData, setGraphData] = useState<GraphData | null>(null);
+  const [loadingGraph, setLoadingGraph] = useState<boolean>(false);
+  const [graphError, setGraphError] = useState<string | null>(null);
+
+  // ---------------- Fetch User Profile ----------------
   const fetchUser = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
@@ -89,9 +117,13 @@ const ProfilePage: React.FC = () => {
   }, [userId]);
 
   useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
+
+  // ---------------- Fetch Relationships ----------------
+  useEffect(() => {
     const fetchRelationships = async () => {
       if (!user) return;
-
       try {
         const token = localStorage.getItem("token");
         if (activeTab === "followers") {
@@ -109,25 +141,67 @@ const ProfilePage: React.FC = () => {
         console.error("Error fetching relationships:", err);
       }
     };
-
     fetchRelationships();
   }, [activeTab, user]);
 
+  // ---------------- Fetch Graph Data ----------------
   useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
+    if (showGraph) {
+      const fetchGraphData = async () => {
+        setLoadingGraph(true);
+        try {
+          const token = localStorage.getItem("token");
+          const res = await axios.get("/api/v1/graph", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setGraphData(res.data);
+        } catch (err) {
+          console.error("Error fetching graph data:", err);
+          setGraphError("Failed to load graph data.");
+        } finally {
+          setLoadingGraph(false);
+        }
+      };
+      fetchGraphData();
+    }
+  }, [showGraph]);
 
+  // ---------------- Transform Graph Data ----------------
+  const graphFormattedData = graphData && {
+    nodes: graphData.nodes.map((node) => ({
+      id: node.id.toString(),
+      label: node.username,
+      title: node.name || node.username,
+    })),
+    links: graphData.edges.map((edge) => ({
+      source: edge.source.toString(),
+      target: edge.target.toString(),
+    })),
+  };
+
+  const myConfig: any = {
+    nodeHighlightBehavior: true,
+    node: {
+      color: theme.palette.primary.main,
+      size: 400,
+      highlightStrokeColor: theme.palette.secondary.main,
+      labelProperty: "title",
+    },
+    link: {
+      highlightColor: theme.palette.secondary.main,
+    },
+    directed: true,
+  };
+
+  // ---------------- Follow/Unfollow Handlers ----------------
   const handleFollow = async () => {
     if (!user) return;
-
     try {
       const token = localStorage.getItem("token");
       await axios.post(
         `/api/v1/users/${user.id}/follow`,
         {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       setUser((prev) =>
         prev
@@ -145,7 +219,6 @@ const ProfilePage: React.FC = () => {
 
   const handleUnfollow = async () => {
     if (!user) return;
-
     try {
       const token = localStorage.getItem("token");
       await axios.delete(`/api/v1/users/${user.id}/unfollow`, {
@@ -230,13 +303,7 @@ const ProfilePage: React.FC = () => {
     <>
       <Navbar isLoggedIn onLogout={() => navigate("/login")} />
 
-      <Box
-        sx={{
-          maxWidth: 1200,
-          mx: "auto",
-          position: "relative",
-        }}
-      >
+      <Box sx={{ maxWidth: 1200, mx: "auto", position: "relative" }}>
         {/* Cover Photo */}
         <Box
           sx={{
@@ -264,23 +331,14 @@ const ProfilePage: React.FC = () => {
 
         {/* Profile Content */}
         <Box sx={{ pt: 8, px: 4, pb: 4 }}>
-          {/* Profile Header */}
           <Box sx={{ textAlign: "center", mb: 4, position: "relative" }}>
-            <Box sx={{ marginBottom: 2, marginTop: 2 }}>
-              {renderFollowButton()}
-            </Box>
-
+            {renderFollowButton()}
             <Typography
               variant="h3"
-              sx={{
-                fontWeight: 700,
-                mb: 1,
-                color: theme.palette.text.primary,
-              }}
+              sx={{ fontWeight: 700, mb: 1, color: theme.palette.text.primary }}
             >
               {user?.name || user?.username}
             </Typography>
-
             <Chip
               label={`@${user?.username}`}
               variant="outlined"
@@ -290,7 +348,16 @@ const ProfilePage: React.FC = () => {
                 bgcolor: theme.palette.background.paper,
               }}
             />
-
+            {/* Button to open the Follow Graph widget */}
+            <Box sx={{ mt: 2 }}>
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={() => setShowGraph(true)}
+              >
+                View Follow Graph
+              </Button>
+            </Box>
             <Grid
               container
               spacing={2}
@@ -314,7 +381,6 @@ const ProfilePage: React.FC = () => {
                   onClick={() => setActiveTab("following")}
                 />
               </Grid>
-
               <Grid item>
                 <Chip
                   icon={<EditIcon fontSize="small" />}
@@ -330,7 +396,6 @@ const ProfilePage: React.FC = () => {
                 />
               </Grid>
             </Grid>
-
             {user?.bio && (
               <Typography
                 variant="body1"
@@ -348,13 +413,7 @@ const ProfilePage: React.FC = () => {
           </Box>
 
           {/* Content Tabs */}
-          <Paper
-            sx={{
-              mb: 3,
-              borderRadius: 3,
-              bgcolor: "background.paper",
-            }}
-          >
+          <Paper sx={{ mb: 3, borderRadius: 3, bgcolor: "background.paper" }}>
             <Tabs
               value={activeTab}
               onChange={(_, newValue) => setActiveTab(newValue)}
@@ -454,15 +513,15 @@ const ProfilePage: React.FC = () => {
             </List>
           )}
 
-          <Box
-            sx={{
-              display: "grid",
-              gap: 3,
-              gridTemplateColumns: { md: "repeat(2, 1fr)" },
-            }}
-          >
-            {activeTab === "posts" &&
-              user?.forum_threads?.map((thread) => (
+          {activeTab === "posts" && (
+            <Box
+              sx={{
+                display: "grid",
+                gap: 3,
+                gridTemplateColumns: { md: "repeat(2, 1fr)" },
+              }}
+            >
+              {user?.forum_threads?.map((thread) => (
                 <Card
                   key={thread.id}
                   onClick={() => navigate(`/forum_threads/${thread.id}`)}
@@ -476,16 +535,9 @@ const ProfilePage: React.FC = () => {
                   }}
                 >
                   <CardContent>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        fontWeight: 600,
-                        mb: 1,
-                      }}
-                    >
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                       {thread.title}
                     </Typography>
-
                     <Typography
                       variant="body2"
                       sx={{
@@ -499,7 +551,6 @@ const ProfilePage: React.FC = () => {
                     >
                       {thread.content}
                     </Typography>
-
                     <Box
                       sx={{
                         display: "flex",
@@ -526,9 +577,26 @@ const ProfilePage: React.FC = () => {
                   </CardContent>
                 </Card>
               ))}
+              {user?.forum_threads?.length === 0 && (
+                <Box
+                  sx={{ textAlign: "center", py: 8, color: "text.secondary" }}
+                >
+                  <EditIcon sx={{ fontSize: 64, mb: 2 }} />
+                  <Typography variant="h6">No posts created yet</Typography>
+                </Box>
+              )}
+            </Box>
+          )}
 
-            {activeTab === "comments" &&
-              user?.comments?.map((comment) => (
+          {activeTab === "comments" && (
+            <Box
+              sx={{
+                display: "grid",
+                gap: 3,
+                gridTemplateColumns: { md: "repeat(2, 1fr)" },
+              }}
+            >
+              {user?.comments?.map((comment) => (
                 <Card
                   key={comment.id}
                   onClick={() =>
@@ -557,7 +625,6 @@ const ProfilePage: React.FC = () => {
                       <CommentIcon color="action" fontSize="small" />
                       In: {comment.thread_title}
                     </Typography>
-
                     <Typography
                       variant="body1"
                       sx={{
@@ -570,7 +637,6 @@ const ProfilePage: React.FC = () => {
                     >
                       {comment.content}
                     </Typography>
-
                     <Box
                       sx={{
                         display: "flex",
@@ -590,36 +656,57 @@ const ProfilePage: React.FC = () => {
                   </CardContent>
                 </Card>
               ))}
-
-            {/* Empty States */}
-            {activeTab === "posts" && user?.forum_threads?.length === 0 && (
-              <Box
-                sx={{
-                  textAlign: "center",
-                  py: 8,
-                  color: "text.secondary",
-                }}
-              >
-                <EditIcon sx={{ fontSize: 64, mb: 2 }} />
-                <Typography variant="h6">No posts created yet</Typography>
-              </Box>
-            )}
-
-            {activeTab === "comments" && user?.comments?.length === 0 && (
-              <Box
-                sx={{
-                  textAlign: "center",
-                  py: 8,
-                  color: "text.secondary",
-                }}
-              >
-                <CommentIcon sx={{ fontSize: 64, mb: 2 }} />
-                <Typography variant="h6">No comments yet</Typography>
-              </Box>
-            )}
-          </Box>
+              {user?.comments?.length === 0 && (
+                <Box
+                  sx={{ textAlign: "center", py: 8, color: "text.secondary" }}
+                >
+                  <CommentIcon sx={{ fontSize: 64, mb: 2 }} />
+                  <Typography variant="h6">No comments yet</Typography>
+                </Box>
+              )}
+            </Box>
+          )}
         </Box>
       </Box>
+
+      {/* ---------------- Graph Widget Dialog ---------------- */}
+      <Dialog
+        open={showGraph}
+        onClose={() => setShowGraph(false)}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle>Follow Graph</DialogTitle>
+        <DialogContent dividers sx={{ height: "70vh" }}>
+          {loadingGraph ? (
+            <Box
+              sx={{
+                display: "flex",
+                height: "100%",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <CircularProgress />
+            </Box>
+          ) : graphError ? (
+            <Typography color="error">{graphError}</Typography>
+          ) : graphData && graphFormattedData ? (
+            <Graph
+              id="follow-graph"
+              data={graphFormattedData}
+              config={myConfig}
+            />
+          ) : (
+            <Typography>No graph data available</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowGraph(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

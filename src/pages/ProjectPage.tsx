@@ -1,5 +1,3 @@
-// src/pages/ProjectPage.tsx
-
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -39,7 +37,7 @@ interface Comment {
   id: number;
   content: string;
   user: User;
-  mood: string; // or you can omit if not used for projects
+  mood: string; // if used
   created_at: string;
   replies: Comment[];
 }
@@ -50,26 +48,30 @@ interface Project {
   description?: string;
   repo_link?: string;
   live_site_link?: string;
+  tech_stack?: string;
+  schema_url?: string;
+  flowchart_url?: string;
   created_at: string;
   user: User;
+  collaborators?: User[];
   comments_count: number;
 }
 
 // -------------- STYLED COMPONENTS --------------
 
-// A "terminal-like" container style for the project title
+// A "terminal-like" container style for the forge header
 const GeekHeader = styled(Box)(({ theme }) => ({
-  background: "linear-gradient(90deg, ffffff 0%, ffffff 100%)",
+  background: theme.palette.background.default,
   padding: theme.spacing(4),
   borderRadius: theme.shape.borderRadius,
   boxShadow: theme.shadows[4],
-  color: "#58F89C", // Some green, Matrix-style text color
+  color: theme.palette.primary.main,
   fontFamily: "'Ubuntu Mono', monospace",
   position: "relative",
   marginBottom: theme.spacing(3),
 }));
 
-const ProjectTitle = styled(Typography)(({ theme }) => ({
+const ProjectTitle = styled(Typography)(({ theme }: any) => ({
   fontSize: "2rem",
   lineHeight: 1.2,
   fontWeight: 700,
@@ -82,7 +84,7 @@ const ProjectTitle = styled(Typography)(({ theme }) => ({
     right: -15,
     fontWeight: 400,
     fontSize: "1.5rem",
-    color: "#58F89C",
+    color: theme.palette.primary.main,
     animation: "blink 1s infinite",
   },
   "@keyframes blink": {
@@ -117,7 +119,6 @@ const CommentContent = styled(Box)(({ theme }) => ({
   boxShadow: theme.shadows[1],
 }));
 
-// A geeky style for the main action button
 const StyledButton = styled(Button)(({ theme }) => ({
   textTransform: "none",
   fontWeight: 500,
@@ -282,10 +283,13 @@ const CommentComponent: React.FC<CommentComponentProps> = ({
   );
 };
 
-// -------------- MAIN PROJECT PAGE COMPONENT --------------
+// -------------- MAIN FORGE PAGE COMPONENT --------------
 const ProjectPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
+  // For current user details, assume they're stored in localStorage.
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [project, setProject] = useState<Project | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -296,6 +300,7 @@ const ProjectPage: React.FC = () => {
   const [collapsedComments, setCollapsedComments] = useState<Set<number>>(
     new Set()
   );
+  const [joinLoading, setJoinLoading] = useState(false);
 
   const toggleCollapse = useCallback((commentId: number) => {
     setCollapsedComments((prev) => {
@@ -307,7 +312,7 @@ const ProjectPage: React.FC = () => {
     });
   }, []);
 
-  // Fetch Project and Comments
+  // Fetch Forge and Comments
   useEffect(() => {
     const fetchProject = async () => {
       setLoading(true);
@@ -316,18 +321,12 @@ const ProjectPage: React.FC = () => {
         const res = await axios.get(`/api/v1/projects/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-
-        // The response structure might look like:
-        // {
-        //   project: { ... },
-        //   comments: [ ... ]
-        // }
-        // Adjust if your API differs:
+        // Expected response: { project: { ... }, comments: [ ... ] }
         setProject(res.data.project);
         setComments(res.data.comments || []);
       } catch (err) {
-        console.error("Error fetching project:", err);
-        setError("Failed to load project.");
+        console.error("Error fetching forge:", err);
+        setError("Failed to load forge.");
       } finally {
         setLoading(false);
       }
@@ -335,7 +334,7 @@ const ProjectPage: React.FC = () => {
     fetchProject();
   }, [id]);
 
-  // Add new comment to the project
+  // Add new comment to the forge
   const handleAddComment = useCallback(
     async (content: string, parentId: number | null) => {
       try {
@@ -345,18 +344,41 @@ const ProjectPage: React.FC = () => {
           { content, parent_id: parentId },
           { headers: { Authorization: `Bearer ${token}` } }
         );
-
-        // Reload or refetch comments after successful post
+        // For simplicity, reload comments after posting
         window.location.reload();
-
-        setMainComment("");
-        setReplyingTo(null);
       } catch (err) {
         console.error("Error adding comment:", err);
       }
     },
     [id]
   );
+
+  // Handle user joining the forge as collaborator
+  const handleJoinAsCollaborator = async () => {
+    setJoinLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(
+        `/api/v1/projects/${id}/add_collaborator`,
+        { collaborator_id: currentUser.id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setProject((prev) =>
+        prev
+          ? {
+              ...prev,
+              collaborators: prev.collaborators
+                ? [...prev.collaborators, currentUser]
+                : [currentUser],
+            }
+          : prev
+      );
+    } catch (err) {
+      console.error("Error joining forge:", err);
+    } finally {
+      setJoinLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -373,7 +395,7 @@ const ProjectPage: React.FC = () => {
     );
   }
 
-  if (error) {
+  if (error || !project) {
     return (
       <Box
         sx={{
@@ -383,35 +405,39 @@ const ProjectPage: React.FC = () => {
           alignItems: "center",
         }}
       >
-        <Typography color="error">{error}</Typography>
+        <Typography color="error">{error || "Forge not found."}</Typography>
       </Box>
     );
   }
+
+  const isOwner = currentUser.id === project.user.id;
+  const isCollaborator =
+    project.collaborators &&
+    project.collaborators.some((c) => c.id === currentUser.id);
 
   return (
     <>
       <Navbar isLoggedIn onLogout={() => navigate("/login")} />
 
       <Box sx={{ maxWidth: "850px", mx: "auto", p: 3 }}>
-        {/* "Terminal" style header for the project */}
+        {/* Terminal-style header for the forge */}
         <GeekHeader>
           <ProjectTitle variant="h3">
-            {project?.title || "Untitled Project"}
+            {project.title || "Untitled Forge"}
           </ProjectTitle>
           <Typography variant="subtitle2">
             <TerminalIcon
               sx={{
                 verticalAlign: "middle",
                 mr: 0.5,
-                color: "#58F89C",
               }}
               fontSize="small"
             />
-            {project?.user?.name || project?.user?.username} @ Project
+            {project.user?.name || project.user?.username} @ The Forge
           </Typography>
         </GeekHeader>
 
-        {/* PROJECT CARD */}
+        {/* FORGE CARD */}
         <Box
           sx={{
             p: 3,
@@ -424,13 +450,13 @@ const ProjectPage: React.FC = () => {
             gap: 2,
           }}
         >
-          {/* PROJECT AUTHOR INFO */}
+          {/* FORGE AUTHOR INFO */}
           <Box
             display="flex"
             alignItems="center"
             gap={2}
             sx={{ cursor: "pointer" }}
-            onClick={() => navigate(`/users/${project?.user?.id}`)}
+            onClick={() => navigate(`/users/${project.user.id}`)}
           >
             <Avatar
               sx={{
@@ -440,21 +466,20 @@ const ProjectPage: React.FC = () => {
                 fontSize: "1rem",
               }}
             >
-              {project?.user.name?.charAt(0) ||
-                project?.user.username.charAt(0)}
+              {project.user.name?.charAt(0) || project.user.username.charAt(0)}
             </Avatar>
             <Box>
               <Typography variant="subtitle1" fontWeight="600">
-                {project?.user.name || project?.user.username}
+                {project.user.name || project.user.username}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Created {moment(project?.created_at).fromNow()}
+                Created {moment(project.created_at).fromNow()}
               </Typography>
             </Box>
           </Box>
 
-          {/* PROJECT DESCRIPTION (monospaced style) */}
-          {project?.description && (
+          {/* FORGE DESCRIPTION */}
+          {project.description && (
             <Typography
               variant="body1"
               sx={{
@@ -470,11 +495,86 @@ const ProjectPage: React.FC = () => {
             </Typography>
           )}
 
+          {/* OPTIONAL FORGE DETAILS */}
+          <Box sx={{ mt: 2 }}>
+            {project.tech_stack && (
+              <Chip
+                label={`Tech Stack: ${project.tech_stack}`}
+                variant="outlined"
+                sx={{
+                  fontFamily: "'Ubuntu Mono', monospace",
+                  mb: 1,
+                  mr: 1,
+                  cursor: "default",
+                }}
+              />
+            )}
+            {project.schema_url && (
+              <Chip
+                label="Schema"
+                variant="outlined"
+                icon={<CodeIcon />}
+                onClick={() => window.open(project.schema_url, "_blank")}
+                sx={{
+                  fontFamily: "'Ubuntu Mono', monospace",
+                  mb: 1,
+                  mr: 1,
+                  cursor: "pointer",
+                }}
+              />
+            )}
+            {project.flowchart_url && (
+              <Chip
+                label="Flowchart"
+                variant="outlined"
+                icon={<LanguageIcon />}
+                onClick={() => window.open(project.flowchart_url, "_blank")}
+                sx={{
+                  fontFamily: "'Ubuntu Mono', monospace",
+                  mb: 1,
+                  mr: 1,
+                  cursor: "pointer",
+                }}
+              />
+            )}
+            {project.collaborators && project.collaborators.length > 0 && (
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="caption" sx={{ mr: 1 }}>
+                  Collaborators:
+                </Typography>
+                {project.collaborators.map((collaborator) => (
+                  <Chip
+                    key={collaborator.id}
+                    label={collaborator.username}
+                    size="small"
+                    sx={{
+                      fontFamily: "'Ubuntu Mono', monospace",
+                      mr: 0.5,
+                    }}
+                  />
+                ))}
+              </Box>
+            )}
+          </Box>
+
+          {/* JOIN AS COLLABORATOR BUTTON */}
+          {!isOwner && !isCollaborator && (
+            <Box sx={{ mt: 2 }}>
+              <Button
+                variant="contained"
+                onClick={handleJoinAsCollaborator}
+                disabled={joinLoading}
+              >
+                {joinLoading ? "Joining..." : "Join as Collaborator"}
+              </Button>
+            </Box>
+          )}
+
           <Divider />
 
-          {/* PROJECT LINKS */}
+          {/* FORGE LINKS */}
           <Box display="flex" flexDirection="column" gap={1}>
-            {project?.repo_link && (
+            {project.repo_link && (
               <Box display="flex" alignItems="center" gap={1}>
                 <Tooltip title="Git Repository">
                   <CodeIcon fontSize="small" color="primary" />
@@ -486,8 +586,7 @@ const ProjectPage: React.FC = () => {
                 />
               </Box>
             )}
-
-            {project?.live_site_link && (
+            {project.live_site_link && (
               <Box display="flex" alignItems="center" gap={1}>
                 <Tooltip title="Live Site">
                   <LanguageIcon fontSize="small" color="secondary" />
@@ -514,7 +613,7 @@ const ProjectPage: React.FC = () => {
           }}
         >
           <ChatBubbleOutlineIcon fontSize="inherit" />
-          Project Discussions
+          Forge Discussions
         </Typography>
 
         {comments.map((comment) => (
@@ -548,7 +647,7 @@ const ProjectPage: React.FC = () => {
             multiline
             minRows={3}
             variant="outlined"
-            placeholder="Start a discussion about this project..."
+            placeholder="Start a discussion about this forge..."
             value={mainComment}
             onChange={(e) => setMainComment(e.target.value)}
             sx={{ mb: 2 }}
